@@ -1,0 +1,23 @@
+<odoo>
+    <record id="email_template_due_invoices" model="mail.template">
+        <field name="name"> Statement of Account</field>
+        <field name="model_id" ref="model_due_invoice_wizard"/>
+        <field name="subject">Statement of Account for {{ object.partner_id.name }}</field>
+        <field name="email_from">{{ user.email_formatted }}</field>
+        <field name="email_to">{{ object.partner_id.email }}</field>
+        <field name="body_html" type="html">
+                <table border="0" cellpadding="0" cellspacing="0" style="width:100%; margin:0px auto;">
+                    <tbody>
+                        <tr>
+                            <td valign="top" style="text-align: left; font-size: 14px;">
+                                Dear <t t-esc="object.partner_id.name" />, your account statement has been generated.<br /><br />
+                                Please find the PDF attached with this email.<br /><br />
+                                Have a nice day,<br />
+                                Dairy Consulting Africa
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </field>
+      </record>
+</odoo>

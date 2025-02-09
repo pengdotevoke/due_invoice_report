@@ -1,0 +1,9 @@
+<odoo>
+    <record id="report_due_invoice_action" model="ir.actions.report">
+        <field name="name">Due Invoice Report</field>
+        <field name="model">due.invoice.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">due_invoice_report.report_due_invoice</field>
+        <field name="print_report_name">'Partner Statement - ' + object.partner_id.name</field>
+    </record>
+</odoo>

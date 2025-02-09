@@ -1,0 +1,136 @@
+<odoo>
+    <template id="report_due_invoice">
+        <t t-call="web.html_container">
+                        <div style="font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;">
+                <table style="width:100%; font-size:18px; font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;" class="table table-sm o_main_table table-borderless mt-4">
+                    <tbody>
+                        <colgroup>
+                                <col width="40%"/>
+                                <col width="20%"/>
+                                <col width="40%"/>
+                        </colgroup>
+                        <tr>
+                        
+                        <td style="text-align:left">
+                            <strong><t t-esc="res_company.name"/><br/></strong> 
+                            <t t-esc="res_company.street"/><br/>
+                            <t t-esc="res_company.street2"/>, <t t-esc="res_company.city"/><br/>
+                            <t t-esc="res_company.phone"/><br/>  
+                            <t t-esc="res_company.email"/><br/>
+                            <t t-esc="res_company.website"/><br/></td>
+                    
+                    <td/>
+                    
+                    <td><img t-if="res_company.logo" t-att-src="image_data_uri(res_company.logo)" alt="Logo"/></td></tr>
+                    </tbody>
+                </table>
+                </div>
+                <br/>
+                <center><h1 style="font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace; color:#1f5999;">
+                               <span>STATEMENT OF ACCOUNT</span>
+                        </h1></center>
+                <table style="width:100%; font-size:18px; font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;" class="table table-sm o_main_table table-borderless mt-4">
+                <tbody>
+                     <colgroup>
+                            <col width="40%"/>
+                             <col width="20%"/>
+                            <col width="40%"/>
+                    </colgroup>
+                    <tr>
+                    
+                    <td style="text-align:left">
+                           <span>
+                           <strong style="color:#1f5999;">TO</strong><br/>
+                          <t t-if="docs.partner_id.name"> <t t-esc="docs.partner_id.name"/><br/></t>
+                           <t t-if="docs.partner_id.street"><t t-esc="docs.partner_id.street"/><br/></t>
+                           <t t-if="docs.partner_id.street2"><t t-esc="docs.partner_id.street2"/></t> <t t-if="docs.partner_id.city"> <t t-esc="docs.partner_id.city"/><br/></t>
+                           <t t-if="docs.partner_id.phone"><strong>Phone:</strong><t t-esc="docs.partner_id.phone"/><br/></t>
+                           <t t-if="docs.partner_id.mobile"><strong>Mobile:</strong> <t t-esc="docs.partner_id.mobile"/><br/></t>
+                           <t t-if="docs.partner_id.vat"><strong>KRA PIN:</strong><t t-esc="docs.partner_id.vat"/><br/></t>
+                           
+                       </span></td>
+                   
+                   <td/>
+                   
+                   <td style=" position: absolute; right: 10px; text-align: left;">
+                        <!-- <t t-if="invoice.name"><strong style="color:#1f5999;">Invoice No: </strong><t t-esc="invoice.name"/></t><br/> 
+                        <t t-if="invoice.invoice_date"><strong style="color:#1f5999;">Invoice Date: </strong><t t-esc="invoice.invoice_date"/></t><br/> 
+                        <t t-if="invoice.invoice_date_due"><strong style="color:#1f5999;">Due Date: </strong><t t-esc="invoice.invoice_date_due"/></t><br/> 
+                        <t t-if="invoice.invoice_payment_term_id.name"><strong style="color:#1f5999;">Payment Terms: </strong><t t-esc="invoice.invoice_payment_term_id.name"/></t><br/>
+                        <t t-if="invoice.made_by"><strong style="color:#1f5999;">Salesperson: </strong><t t-esc="invoice.made_by"/></t><br/>  -->
+                    </td></tr>
+                </tbody>
+            </table>
+            <br/><br/>
+                <div style="font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;">
+                    <table style="width:100%; font-size:18px; font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;" 
+       class="table table-sm o_main_table table-borderless mt-4">
+    <thead style="background-color: #deeaf6; font-weight:bold;">
+        <tr>
+        <th style="color:#1f5999;">Invoice Number</th>
+            <th style="color:#1f5999; text-align:left">Date</th>            
+            <th style="color:#1f5999; text-align:left">Due Date</th>
+            <th style="color:#1f5999; text-align:left">Debit</th>
+            <th style="color:#1f5999; text-align:left">Credit</th>
+            <th style="color:#1f5999; text-align:right">Running Balance</th>
+        </tr>
+    </thead>
+    <tbody>
+        <colgroup>
+            <col width="30%"/>
+            <col width="20%"/>
+            <col width="20%"/>
+            <col width="10%"/>
+            <col width="10%"/>
+            <col width="10%"/>
+        </colgroup>
+        
+        <t t-set="total_debit" t-value="0"/>
+        <t t-set="total_credit" t-value="0"/>
+        <t t-set="running_balance" t-value="0"/>
+        <t t-foreach="records" t-as="record">
+        <t t-set="running_balance" t-value="running_balance + record['debit']-record['credit']"/>
+            <tr>
+                <td><t t-esc="record['reference'] or '-'"/></td>
+                <td><t t-esc="record['date'] or '-'"/></td>
+                <td><t t-esc="record['due_date'] or '-'"/></td>
+                <td class="text-right"><t t-esc="'{:,.2f}'.format(record['debit']) if record['debit'] != 0 else '-'"/>
+                    </td>
+                    <td class="text-right">
+                        <t t-esc="'{:,.2f}'.format(record['credit']) if record['credit'] != 0 else '-'"/>
+                    </td>
+                    <td class="text-right" style="text-align:right">
+                        <t t-esc="'{:,.2f}'.format(running_balance)"/>
+                    </td>
+            </tr>
+            <t t-set="total_debit" t-value="total_debit + record['debit'] "/>
+            <t t-set="total_credit" t-value="total_credit + record['credit'] "/>
+        </t>
+    </tbody>
+    
+    <!-- Totals -->
+    <tfoot>
+        <tr style="font-weight: bold;">
+            <td colspan="3" style="text-align:right;">Total:</td>
+            <td><t t-esc="'{:,.2f}'.format(total_debit)"/></td>
+            <td><t t-esc="'{:,.2f}'.format(total_credit)"/></td>
+            <td style="text-align:right"><t t-esc="'{:,.2f}'.format(running_balance)"/></td>
+        </tr>
+    </tfoot>
+</table>
+
+
+
+
+                </div>
+        </t>
+    </template>
+
+    <record id="action_due_invoice_report" model="ir.actions.report">
+        <field name="name">Due Invoices</field>
+        <field name="model">due.invoice.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">due_invoice_report.report_due_invoice</field>
+        <field name="print_report_name">'Due_Invoices_' + docs.partner_id.name</field>
+    </record>
+</odoo>

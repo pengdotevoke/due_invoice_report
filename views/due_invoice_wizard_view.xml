@@ -1,0 +1,29 @@
+<odoo>
+    <record id="view_due_invoice_wizard" model="ir.ui.view">
+        <field name="name">due.invoice.wizard.form</field>
+        <field name="model">due.invoice.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generate Partner Statement">
+                <group>
+                    <field name="partner_id"/>
+                </group>
+                <footer>
+                    <button type="object" name="action_print_due_invoices" string="Generate Report" class="btn-primary"/>
+                    <button name="send_report_email" type="object" string="Send via Email" class="btn-secondary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_due_invoice_wizard" model="ir.actions.act_window">
+        <field name="name">Generate Partner Statement</field>
+        <field name="res_model">due.invoice.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_due_invoice_report" name="Generate Partner Statement"
+              parent="account.menu_finance_reports"
+              action="action_due_invoice_wizard"/>
+</odoo>

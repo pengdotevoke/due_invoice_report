@@ -11,7 +11,7 @@
         "report/due_invoice_template.xml",
         "report/due_invoice_report.xml",
         "data/email_templates.xml",
-        "data/cron.xml",
+       # "data/cron.xml",
     ],
     "installable": True,
     "application": False,

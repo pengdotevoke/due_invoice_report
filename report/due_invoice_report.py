@@ -3,20 +3,52 @@ from odoo import models
 
 _logger = logging.getLogger(__name__)
 
+
 class DueInvoiceReport(models.AbstractModel):
     _name = "report.due_invoice_report.report_due_invoice"
     _description = "Due Invoice Report"
 
     def _get_report_values(self, docids, data=None):
-        _logger.info("Generating Due Invoice Report for docids: %s", docids)
-
         docs = self.env["due.invoice.wizard"].browse(docids)
         company = self.env.company
         records = []
-
         for partner in docs.partner_id:
-            _logger.info("Processing partner: %s (ID: %s)", partner.name, partner.id)
+      #overpayments
+      #search for all unreconciled payments
+            counterpart_payment = self.env["account.payment"].search([
+                    ("state", "=", "posted"),
+                    ("payment_type", "=", "inbound"),
+                    ("partner_type", "=", "customer"),
+                    ("partner_id", "=", partner.id),
+                    ("is_reconciled", "=", False),
+                ])
+            #look for those that don't have reconcile IDs
+            for payment in counterpart_payment:
+                    #skip those that do not
+                    if not payment.reconciled_invoice_ids:
+                        continue
+                    else:  
+                        #for those who have
+                        for invoice in payment.reconciled_invoice_ids: 
+                            #check if the payment amount is more than the invoice amount and the invoice amount is not zero[needed in order to filter unreconcile entries thate came up in estept 1]
+                            if payment.amount > invoice.amount_total_signed and invoice.amount_total_signed !=0: 
+                                    #find the remaining amount                      
+                                    rem = payment.amount - invoice.amount_total_signed
+                                    #create record in payment and ensure that the corresponding entry is note erased when payments are searched in line 112
+                                    record = {
+                                                        "date": payment.date,
+                                                        "reference":  payment.name,
+                                                        "due_date": '',
+                                                        "debit": 0.0,   
+                                                        "credit": rem, 
+                                                        "running_balance": 0.0,  
+                                                    }
 
+                                    if record not in records:
+                                                        records.append(record)
+                        
+
+           
            #Invoices
             invoices = self.env["account.move"].search([
                 ("partner_id", "=", partner.id),
@@ -29,10 +61,8 @@ class DueInvoiceReport(models.AbstractModel):
                 ("line_ids.matched_credit_ids", "=", False) 
             ])
 
-
-            _logger.info("Found %d invoices for partner %s", len(invoices), partner.name)
-
             for inv in invoices:
+                
                 record = {
                     "date": inv.invoice_date,
                     "reference": inv.name,
@@ -41,17 +71,18 @@ class DueInvoiceReport(models.AbstractModel):
                     "credit": 0.0, 
                     "running_balance": inv.amount_residual,  
                 }
-                _logger.debug("Generated record for invoice: %s", record)
+           
 
                 if record not in records:
                     records.append(record)
+                    
             #Credit Notes
             cnotes = self.env["account.move"].search([
                 ("partner_id", "=", partner.id),
                 ("move_type", "=", "out_refund"),   
                 ("payment_state", "!=", "paid"),   
             ])
-            _logger.info("Found %d Credit Notes for partner %s", len(cnotes), partner.name)
+          
             for cred in cnotes:
                 record = {
                     "date":cred.invoice_date,
@@ -61,7 +92,7 @@ class DueInvoiceReport(models.AbstractModel):
                     "credit": cred.amount_residual,
                     "running_balance": 0.0,  
                 }
-                _logger.debug("Generated record for invoice: %s", record)
+                
 
                 if record not in records:
                     records.append(record)
@@ -76,20 +107,18 @@ class DueInvoiceReport(models.AbstractModel):
                 ("payment_state", "!=", "paid"), 
             ])
 
-           # _logger.info("Found %d payments for partner %s", len(payments), partner.name)
+          
 
             for pmt in account_payments:
-                record = {
-                    "date": pmt.date,
-                    "reference": pmt.move_id.name,
-                    "due_date": "-",
-                    "debit": 0.0,  # Payment as Debit
-                    "credit": pmt.amount_total_signed, 
-                    "running_balance": 0.0
-                }
-                _logger.debug("Generated record for payment: %s", record)
-
-                if record not in records:
+                if not any(rec["reference"] == pmt.move_id.name for rec in records):
+                    record = {
+                        "date": pmt.date,
+                        "reference": pmt.move_id.name,
+                        "due_date": "-",
+                        "debit": 0.0,
+                        "credit": pmt.amount_total_signed,
+                        "running_balance": 0.0
+                    }
                     records.append(record)
 
             #Special Credit Notes
@@ -99,7 +128,6 @@ class DueInvoiceReport(models.AbstractModel):
                 ("state", "=", "posted"), 
                 ("move_type", "=", "entry"), 
                 ("name", "ilike", "SRInv"), 
-                ("has_reconciled_entries", "=", False),
             ])
 
            # _logger.info("Found %d payments for partner %s", len(payments), partner.name)
@@ -164,10 +192,7 @@ class DueInvoiceReport(models.AbstractModel):
                 _logger.debug("Generated record for payment: %s", record)
                 if record not in records:
                     records.append(record)
-	    
-        _logger.info("Total records generated: %d", len(records))
-        _logger.debug("All generated records: %s", records)
-
+        
         for record in records:
             record.setdefault('debit', 0.0)  
             record.setdefault('credit', 0.0)  
@@ -184,7 +209,7 @@ class DueInvoiceReport(models.AbstractModel):
             "company": company,
             "records": docs_sorted,  
         }
-        _logger.info("Final report data being returned: %s", final_report_values)
+       
         
 
         return final_report_values

@@ -1,5 +1,6 @@
 import logging
 from odoo import models
+from datetime import datetime, date
 
 _logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class DueInvoiceReport(models.AbstractModel):
                                     record = {
                                                         "date": payment.date,
                                                         "reference":  payment.name,
-                                                        "due_date": '',
+                                                        "due_date": payment.date,
                                                         "debit": 0.0,   
                                                         "credit": rem, 
                                                         "running_balance": 0.0,  
@@ -55,8 +56,7 @@ class DueInvoiceReport(models.AbstractModel):
                 ("move_type", "=", "out_invoice"),
                 ("state", "=", "posted"),
  		        ("amount_residual", ">", 0),
-                ("name", "not ilike", "STJ"),  
-                ("reversal_move_id", "=", False),  
+                ("name", "not ilike", "STJ"),    
                 ("line_ids.matched_debit_ids", "=", False),  
                 ("line_ids.matched_credit_ids", "=", False) 
             ])
@@ -80,7 +80,8 @@ class DueInvoiceReport(models.AbstractModel):
             cnotes = self.env["account.move"].search([
                 ("partner_id", "=", partner.id),
                 ("move_type", "=", "out_refund"),   
-                ("payment_state", "!=", "paid"),   
+                ("payment_state", "!=", "paid"), 
+                ("state", "=", "posted"),  
             ])
           
             for cred in cnotes:
@@ -114,7 +115,7 @@ class DueInvoiceReport(models.AbstractModel):
                     record = {
                         "date": pmt.date,
                         "reference": pmt.move_id.name,
-                        "due_date": "-",
+                        "due_date": pmt.date,
                         "debit": 0.0,
                         "credit": pmt.amount_total_signed,
                         "running_balance": 0.0
@@ -136,9 +137,9 @@ class DueInvoiceReport(models.AbstractModel):
                 record = {
                     "date": spec_credit.date,
                     "reference": spec_credit.name,
-                    "due_date": "-",
-                    "debit": spec_credit.amount_total_signed,  # Payment as Debit
-                    "credit": 0.0, 
+                    "due_date": spec_credit.date,
+                    "debit": 0.0,  # Payment as Debit
+                    "credit": spec_credit.amount_total_signed, 
                     "running_balance": 0.0
                 }
 
@@ -160,12 +161,35 @@ class DueInvoiceReport(models.AbstractModel):
                 record = {
                     "date": pmtmv.date,
                     "reference": pmtmv.name,
-                    "due_date": "-",
+                    "due_date": pmtmv.date,
                     "debit": 0.0,  # Payment as Debit
                     "credit": pmtmv.amount_total_signed, 
                     "running_balance": 0.0
                 }
                 _logger.debug("Generated record for payment: %s", record)
+                if record not in records:
+                    records.append(record)
+            #Journal Entries
+            #Journal entries have no field relating to partner in the form view so we create one with studio
+            #Set this field to be visible only if the journal_id is miscellaneous and editable if state is not posted
+
+            jrnlentries = self.env["account.move"].search([
+                ("x_studio_customer_2", "=", partner.id),
+                ("move_type", "=", "entry"),
+		        ("name", "not ilike", "STJ"),  
+                ("journal_id", "=", 3),  
+            ])
+            #_logger.info("Found %d Journal Entries for partner %s", len(jrnlentries), partner.name)
+
+            for entry in jrnlentries:
+                record = {
+                    "date": entry.date,
+                    "reference": entry.name,
+                    "due_date": entry.date,
+                    "debit": 0.0,  # Payment as Debit
+                    "credit": entry.amount_total_signed, 
+                    "running_balance": 0.0
+                }
                 if record not in records:
                     records.append(record)
 
@@ -184,7 +208,7 @@ class DueInvoiceReport(models.AbstractModel):
                 record = {
                     "date": pmtstk.date,
                     "reference": pmtstk.name,
-                    "due_date": "-",
+                    "due_date": pmtstk.date,
                     "debit": 0.0,  # Payment as Debit
                     "credit": pmtstk.amount_total_signed, 
                     "running_balance": 0.0
@@ -202,12 +226,67 @@ class DueInvoiceReport(models.AbstractModel):
 
         # Final record that will be returned
         docs_sorted = sorted(records, key=lambda x: x['date'])
+
+        def group_by_date(docs_sorted):
+            today = date.today()
+            sums = {
+                "AtDate": 0,
+                "30days": 0,
+                "60days": 0,
+                "90days": 0,
+                "120days": 0,
+                "Over120": 0,
+            }
+
+            for record in docs_sorted:
+                raw_date = record.get("due_date")
+                debit = record.get("debit", 0.0)
+                credit = record.get("credit", 0.0)
+                running_balance = debit-credit
+
+                # Convert string dates to date objects if necessary
+                if isinstance(raw_date, str):
+                    try:
+                        record_date = datetime.strptime(raw_date, "%Y-%m-%d").date()  # Adjust format as needed
+                    except ValueError:
+                        continue  # Skip invalid date formats
+                elif isinstance(raw_date, datetime):
+                    record_date = raw_date.date()  # Convert datetime to date
+                elif isinstance(raw_date, date):
+                    record_date = raw_date  # Already a date object
+                else:
+                    continue  # Skip invalid types
+
+                # Calculate days difference
+                delta_days = (today - record_date).days
+                if delta_days <= 0:
+                    sums["AtDate"] += running_balance 
+                elif 1 <= delta_days < 31:
+                    sums["30days"] += running_balance
+                elif 31 <= delta_days < 61:
+                    sums["60days"] += running_balance
+                elif 61 <= delta_days < 91:
+                    sums["90days"] += running_balance
+                elif 91 <= delta_days < 121:
+                    sums["120days"] += running_balance
+                else:
+                    sums["Over120"] += running_balance 
+
+
+            _logger.info("Grouped by date: %s", sums)
+            return sums
+
+             
+
+
         final_report_values = {
             "doc_ids": docids,
             "doc_model": "due.invoice.wizard",
             "docs": docs,
             "company": company,
-            "records": docs_sorted,  
+            "records": docs_sorted,     
+            "grouped_sums": group_by_date(docs_sorted),  # Include grouped sums
+    
         }
        
         

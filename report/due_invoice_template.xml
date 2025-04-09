@@ -118,11 +118,46 @@
         </tr>
     </tfoot>
 </table>
+<center><h1 style="font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace; color:#1f5999;">
+                               <span>AGED PARTNER STATEMENT</span>
+                        </h1></center>
+<t t-set="grouped_sums" t-value="grouped_sums"/>
+<table style="width:100%; font-size:18px; font-family: 'Fira Code', 'Source Code Pro', Consolas, 'Courier New', monospace;" 
+       class="table table-sm o_main_table table-borderless mt-4">
+    <thead style="background-color: #deeaf6; font-weight:bold;">
+        <tr>
+            <th style="color:#1f5999; text-align:left">At Date</th>
+            <th style="color:#1f5999; text-align:left">1 - 30 Days</th>            
+            <th style="color:#1f5999; text-align:left">31 - 60 Days</th>
+            <th style="color:#1f5999; text-align:left">61 - 90 Days</th>
+            <th style="color:#1f5999; text-align:left">91 - 120 Days</th>
+            <th style="color:#1f5999; text-align:left">Over 120 Days</th>
+        </tr>
+    </thead>
+    <tbody>
+    <td t-att-style="'color:red' if grouped_sums.get('AtDate', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('AtDate', 0.0))"/>
+        
+    <td t-att-style="'color:red' if grouped_sums.get('30days', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('30days', 0.0))"/>
+        
+    <td t-att-style="'color:red' if grouped_sums.get('60days', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('60days', 0.0))"/>
+        
+    <td t-att-style="'color:red' if grouped_sums.get('90days', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('90days', 0.0))"/>
+        
+    <td t-att-style="'color:red' if grouped_sums.get('120days', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('120days', 0.0))"/>
+        
+    <td t-att-style="'color:red' if grouped_sums.get('Over 120', 0.0) &lt; 0 else 'color:#1f5999; text-align:left'" 
+        t-esc="'{:,.2f}'.format(grouped_sums.get('Over120', 0.0))"/>
+</tbody>
+</table>
 
 
 
-
-                </div>
+</div>
         </t>
     </template>
 
